@@ -3,10 +3,21 @@
 require("dotenv").config();
 
 const express = require("express");
+const mongoose = require("mongoose");
 const orderRoutes = require("./routes/orderRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ─── Database ─────────────────────────────────────────────────────────────────
+if (process.env.MONGODB_URI) {
+    mongoose
+        .connect(process.env.MONGODB_URI)
+        .then(() => console.log("✅ MongoDB connected successfully"))
+        .catch((err) => console.error("❌ MongoDB connection error:", err));
+} else {
+    console.warn("⚠️  No MONGODB_URI found. Webhook savings will fail.");
+}
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());

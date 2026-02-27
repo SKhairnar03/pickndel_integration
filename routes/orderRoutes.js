@@ -111,7 +111,7 @@ router.post("/status", async (req, res) => {
 //   ... other fields
 // }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post("/pikndel/status", verifyWebhookSecret, (req, res) => {
+router.post("/pikndel/status", verifyWebhookSecret, async (req, res) => {
     try {
         const payload = req.body || {};
         const { AWBNo, short_code, activity, timestamp } = payload;
@@ -126,7 +126,6 @@ router.post("/pikndel/status", verifyWebhookSecret, (req, res) => {
         console.log("  Full payload:", JSON.stringify(payload, null, 2));
         console.log("──────────────────────────────────────────────────");
 
-        // ── Map known short_codes for downstream logic ────────────────────────
         const STATUS_MAP = {
             NEW: "Order Created",
             PCK: "Parcel Picked Up",
@@ -140,12 +139,23 @@ router.post("/pikndel/status", verifyWebhookSecret, (req, res) => {
         const readableStatus = STATUS_MAP[short_code] || short_code;
         console.log(`[PIKNDEL Webhook] Status: ${readableStatus} – ${activity}`);
 
-        // ── TODO: Emit to socket / update DB here ────────────────────────────
-        // e.g. await OrderModel.updateStatus(AWBNo, short_code, activity);
-        // e.g. io.to(AWBNo).emit("status_update", { short_code, activity });
+        // ── Save to MongoDB ───────────────────────────────────────────────────
+        const WebhookResponse = require("../models/WebhookResponse");
+        try {
+            await WebhookResponse.create({
+                AWBNo,
+                short_code,
+                activity,
+                timestamp,
+                rawPayload: payload,
+            });
+            console.log("✅ Webhook payload saved to MongoDB -> 'pickndel integration responce file'");
+        } catch (dbErr) {
+            console.error("❌ Failed to save webhook to MongoDB:", dbErr.message);
+        }
 
         // Always acknowledge immediately so PIKNDEL does not retry
-        return res.status(200).json({ success: true, message: "Webhook received." });
+        return res.status(200).json({ success: true, message: "Webhook received and saved." });
     } catch (err) {
         console.error("[PIKNDEL Webhook] Error processing payload:", err.message);
         return res.status(500).json({ success: false, error: "Webhook handler error." });

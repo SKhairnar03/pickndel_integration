@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Environment variables (keep credentials out of git)
+.env
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
